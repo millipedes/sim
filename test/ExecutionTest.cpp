@@ -2,13 +2,251 @@
 
 #include "Context.h"
 
-TEST(execution, execution_test_0) {
+constexpr static auto line_one_through_five = R"(This is line #1
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+)";
+
+TEST(execution, append_test_0) {
+  auto result = execute(line_one_through_five, R"({
+  "a": {
+    "arguments": ["This is a new line"]
+  }
+})");
+
+  auto expected_output = R"(This is line #1
+This is a new line
+This is line #2
+This is a new line
+This is line #3
+This is a new line
+This is line #4
+This is a new line
+This is line #5
+This is a new line
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, append_test_1) {
+  auto result = execute(line_one_through_five, R"({
+  "a": {
+    "address": 2,
+    "arguments": ["This is a new line"]
+  }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #2
+This is a new line
+This is line #3
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, change_test_0) {
+  auto result = execute(line_one_through_five, R"({
+  "c": {
+    "arguments": ["This is a different line"]
+  }
+})");
+
+  auto expected_output = R"(This is a different line
+This is a different line
+This is a different line
+This is a different line
+This is a different line
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, change_test_1) {
+  auto result = execute(line_one_through_five, R"({
+  "c": {
+    "address": 2,
+    "arguments": ["This is a different line"]
+  }
+})");
+
+  auto expected_output = R"(This is line #1
+This is a different line
+This is line #3
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, delete_test_0) {
   auto result = execute(R"(This is line #1
 This is line #2
 This is line #3
 This is line #4
 This is line #5
+)", R"({ "d": {} })");
+
+  auto expected_output = R"()";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, delete_test_1) {
+  auto result = execute(line_one_through_five, R"({
+  "d": {
+    "address": 2
+  }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #3
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, insert_test_0) {
+  auto result = execute(line_one_through_five, R"({
+  "i": {
+    "arguments": ["This is a new line"]
+  }
+})");
+
+  auto expected_output = R"(This is a new line
+This is line #1
+This is a new line
+This is line #2
+This is a new line
+This is line #3
+This is a new line
+This is line #4
+This is a new line
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, insert_test_1) {
+  auto result = execute(line_one_through_five, R"({
+  "i": {
+    "address": 2,
+    "arguments": ["This is a new line"]
+  }
+})");
+
+  auto expected_output = R"(This is line #1
+This is a new line
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, execute_test_0) {
+#if defined(__linux__)
+  // There is a wanrning if the user just wants to execute a whole file, because
+  // it would be better to put it through a proper bash interpreter
+  testing::internal::CaptureStdout();
+  auto result = execute(R"(echo -n "Hello World"
+echo -n "Hello World"
+echo -n "Hello World"
+echo -n "Hello World"
 )", R"({
+  "e": {}
+})");
+
+  auto expected_output = R"(Hello World
+Hello World
+Hello World
+Hello World
+)";
+  // Warning over
+  testing::internal::GetCapturedStdout();
+
+  ASSERT_EQ(result, expected_output);
+#endif
+}
+
+TEST(execution, execute_test_1) {
+#if defined(__linux__)
+  auto result = execute(R"(This is line #1
+echo -n "Hello World"
+This is line #3
+This is line #4
+This is line #5
+This is line #6
+)", R"({
+  "e": {
+    "address": 2
+  }
+})");
+
+  auto expected_output = R"(This is line #1
+Hello World
+This is line #3
+This is line #4
+This is line #5
+This is line #6
+)";
+
+  ASSERT_EQ(result, expected_output);
+#endif
+}
+
+TEST(execution, add_to_static_test_0) {
+  auto result = execute(line_one_through_five, R"({
+  "h": {
+    "address": 2
+  },
+  "g": {}
+})");
+
+  auto expected_output = R"(
+
+This is line #2
+This is line #2
+This is line #2
+This is line #2
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, add_to_static_test_1) {
+  auto result = execute(line_one_through_five, R"({
+  "h": {
+    "address": 2
+  },
+  "g": {
+    "address": 3
+  }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #2
+This is line #2
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, combination_command_test_0) {
+  auto result = execute(line_one_through_five, R"({
   "d": {
     "address": 3
   },

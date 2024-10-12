@@ -1,5 +1,8 @@
 #pragma once
 
+#if defined(__linux__)
+#include <cstdio>
+#endif
 #include <optional>
 #include <string>
 #include <string_view>
@@ -22,14 +25,14 @@ auto execute(const std::string& input,
 struct Context {
   std::string_view stream;
   std::optional<std::string> operations_stream;
-  Strings static_stream;
+  std::optional<std::string> static_stream;
   Commands commands;
   uint64_t cycle;
 
   Context(const std::string& stream) 
     : stream(stream),
       operations_stream(std::nullopt),
-      static_stream(Strings()),
+      static_stream(std::nullopt),
       commands(Commands()),
       cycle(0) {}
 

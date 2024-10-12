@@ -1,13 +1,51 @@
 #include "Context.h"
 
+#include <iostream>
 #include <functional>
+#include <memory>
 #include <ranges>
 
 // We want to be able to handle/give context to errors when running sedim
 // scripts
 using ResultContext = tl::expected<Context, std::string>;
 
+auto append_function(Context context, const Command& command) -> ResultContext {
+  if (!command.arguments) {
+    return tl::make_unexpected("append_function: no arguments provided");
+  } else if (command.arguments->size() != 1) {
+    return tl::make_unexpected("append_function: append expects 1 argument");
+  }
+
+  if (command.address && context.cycle == command.address) {
+    context.operations_stream = context.operations_stream.value()
+      + std::string(nl) + command.arguments.value()[0];
+  } else if (!command.address) {
+    context.operations_stream = context.operations_stream.value()
+      + std::string(nl) + command.arguments.value()[0];
+  }
+  return context;
+}
+
+auto change_function(Context context, const Command& command) -> ResultContext {
+  if (!command.arguments) {
+    return tl::make_unexpected("change_function: no arguments provided");
+  } else if (command.arguments->size() != 1) {
+    return tl::make_unexpected("change_function: change expects 1 argument");
+  }
+
+  if (command.address && context.cycle == command.address) {
+    context.operations_stream = command.arguments.value()[0];
+  } else if (!command.address) {
+    context.operations_stream = command.arguments.value()[0];
+  }
+  return context;
+}
+
 auto delete_function(Context context, const Command& command) -> ResultContext {
+  if (command.arguments) {
+    std::cout << "delete_function: the delete command does not take arguments "
+      "ignoring them" << std::endl;
+  }
   if (command.address && context.cycle == command.address) {
     context.operations_stream = std::nullopt;
   } else if (!command.address) {
@@ -16,30 +54,110 @@ auto delete_function(Context context, const Command& command) -> ResultContext {
   return context;
 }
 
-auto append_function(Context context, const Command& command) -> ResultContext {
+auto insert_function(Context context, const Command& command) -> ResultContext {
   if (!command.arguments) {
-    return tl::make_unexpected("append_function: no arguments provided");
+    return tl::make_unexpected("insert_function: no arguments provided");
   } else if (command.arguments->size() != 1) {
-    return tl::make_unexpected("append_function: appened expects 1 argument");
+    return tl::make_unexpected("insert_function: insert expects 1 argument");
   }
 
   if (command.address && context.cycle == command.address) {
-    context.operations_stream = context.operations_stream.value()
-      + std::string(nl) + command.arguments.value()[0];
+    context.operations_stream = command.arguments.value()[0]
+      + std::string(nl) + context.operations_stream.value();
   } else if (!command.address) {
-    context.operations_stream = context.operations_stream.value()
-      + std::string(nl) + command.arguments.value()[0];
+    context.operations_stream = command.arguments.value()[0]
+      + std::string(nl) + context.operations_stream.value();
+  }
+  return context;
+}
+
+auto execute_function(Context context, const Command& command) -> ResultContext {
+#ifndef __linux__
+  return tl::make_unexpected("execute_function: command line execution only "
+      "supported for linux");
+#else
+  if (command.arguments) {
+    std::cout << "execute_function: the execute command does not take arguments "
+      "ignoring them" << std::endl;
+  }
+
+  std::array<char, 128> buffer;
+  std::string result;
+  auto full_command = context.operations_stream.value();
+
+
+  if (command.address && context.cycle == command.address) {
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(full_command.c_str(), "r"), pclose);
+    if (!pipe) {
+      return tl::make_unexpected("execute_function: popen() failed");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get())) {
+      result += buffer.data();
+    }
+    context.operations_stream = result;
+  } else if (!command.address) {
+    std::cout << "execute_function: warning: whole input file is being "
+      "executed, just write a shell script?" << std::endl;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(full_command.c_str(), "r"), pclose);
+    if (!pipe) {
+      return tl::make_unexpected("execute_function: popen() failed");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get())) {
+      result += buffer.data();
+    }
+    context.operations_stream = result;
+  }
+  return context;
+#endif
+}
+
+auto add_to_static_function(Context context, const Command& command) -> ResultContext {
+  if (command.arguments) {
+    std::cout << "add_to_static_function: the add_to_static command does not "
+      "take arguments ignoring them" << std::endl;
+  }
+
+  if (command.address && context.cycle == command.address) {
+    context.static_stream = context.operations_stream;
+  } else if (!command.address) {
+    context.static_stream = context.operations_stream;
+  }
+  return context;
+}
+
+auto replace_operation_function(Context context, const Command& command) -> ResultContext {
+  if (command.arguments) {
+    std::cout << "replace_operation_function: the replace_operation command does not "
+      "take arguments ignoring them" << std::endl;
+  }
+
+  if (command.address && context.cycle == command.address) {
+    context.operations_stream = context.static_stream
+      ? context.static_stream : std::string(nl);
+  } else if (!command.address) {
+    context.operations_stream = context.static_stream
+      ? context.static_stream : std::string(nl);
   }
   return context;
 }
 
 using SemanticFunc = std::function<ResultContext(Context, const Command&)>;
 using CommandSemanticUMap = std::unordered_map<std::string, SemanticFunc>;
-static inline CommandSemanticUMap control_flow_map = CommandSemanticUMap {
-  {"d",      delete_function},
-  {"delete", delete_function},
-  {"a",      append_function},
-  {"append", append_function},
+static inline auto control_flow_map = CommandSemanticUMap {
+  {"a",                 append_function},
+  {"append",            append_function},
+  {"c",                 change_function},
+  {"change",            change_function},
+  {"d",                 delete_function},
+  {"delete",            delete_function},
+  {"i",                 insert_function},
+  {"insert",            insert_function},
+  {"e",                 execute_function},
+  {"execute",           execute_function},
+  {"h",                 add_to_static_function},
+  {"add_to_static",     add_to_static_function},
+  {"g",                 replace_operation_function},
+  {"replace_operation", replace_operation_function},
 };
 
 auto execute(const std::string& input,
@@ -66,7 +184,12 @@ auto execute(const std::string& input,
           break;
         }
       } else if (control_flow_map.contains(command.name)) {
-        context = control_flow_map.at(command.name)(std::move(context), command).value();
+        auto maybe_context = control_flow_map.at(command.name)(std::move(context), command);
+        if (!maybe_context) {
+          throw std::runtime_error(std::string("execute: unable to execute command: ")
+              + maybe_context.error());
+        }
+        context = maybe_context.value();
       } else {
         throw std::runtime_error(std::string("execute: no command with name: ")
             + command.name);
