@@ -16,10 +16,7 @@ auto append_function(Context context, const Command& command) -> ResultContext {
     return tl::make_unexpected("append_function: append expects 1 argument");
   }
 
-  if (command.address && context.cycle == *command.address) {
-    context.operations_stream = *context.operations_stream
-      + std::string(nl) + (*command.arguments)[0];
-  } else if (!command.address) {
+  if (command.address && context.cycle == *command.address || !command.address) {
     context.operations_stream = *context.operations_stream
       + std::string(nl) + (*command.arguments)[0];
   }
@@ -33,9 +30,7 @@ auto change_function(Context context, const Command& command) -> ResultContext {
     return tl::make_unexpected("change_function: change expects 1 argument");
   }
 
-  if (command.address && context.cycle == *command.address) {
-    context.operations_stream = (*command.arguments)[0];
-  } else if (!command.address) {
+  if (command.address && context.cycle == *command.address || !command.address) {
     context.operations_stream = (*command.arguments)[0];
   }
   return context;
@@ -46,9 +41,7 @@ auto delete_function(Context context, const Command& command) -> ResultContext {
     std::cout << "delete_function: the delete command does not take arguments "
       "ignoring them" << std::endl;
   }
-  if (command.address && context.cycle == *command.address) {
-    context.operations_stream = std::nullopt;
-  } else if (!command.address) {
+  if (command.address && context.cycle == *command.address || !command.address) {
     context.operations_stream = std::nullopt;
   }
   return context;
@@ -61,10 +54,7 @@ auto insert_function(Context context, const Command& command) -> ResultContext {
     return tl::make_unexpected("insert_function: insert expects 1 argument");
   }
 
-  if (command.address && context.cycle == *command.address) {
-    context.operations_stream = (*command.arguments)[0]
-      + std::string(nl) + *context.operations_stream;
-  } else if (!command.address) {
+  if (command.address && context.cycle == *command.address || !command.address) {
     context.operations_stream = (*command.arguments)[0]
       + std::string(nl) + *context.operations_stream;
   }
@@ -117,9 +107,7 @@ auto add_to_static_function(Context context, const Command& command) -> ResultCo
       "take arguments ignoring them" << std::endl;
   }
 
-  if (command.address && context.cycle == *command.address) {
-    context.static_stream = context.operations_stream;
-  } else if (!command.address) {
+  if (command.address && context.cycle == *command.address || !command.address) {
     context.static_stream = context.operations_stream;
   }
   return context;
@@ -131,12 +119,26 @@ auto replace_operation_function(Context context, const Command& command) -> Resu
       "take arguments ignoring them" << std::endl;
   }
 
-  if (command.address && context.cycle == *command.address) {
+  if (command.address && context.cycle == *command.address || !command.address) {
     context.operations_stream = context.static_stream
       ? context.static_stream : std::string(nl);
-  } else if (!command.address) {
-    context.operations_stream = context.static_stream
-      ? context.static_stream : std::string(nl);
+  }
+  return context;
+}
+
+auto unamb_operations_stream(Context context, const Command& command) -> ResultContext {
+  if (command.arguments) {
+    std::cerr << "print_operations_function: the print_operations command does not "
+      "take arguments ignoring them" << std::endl;
+  }
+  if (!context.operations_stream) {
+    return tl::make_unexpected("unamb_operations_stream: operations_stream holds "
+        "no value");
+  }
+  if (command.address && context.cycle == *command.address || !command.address) {
+    context.operations_stream =
+      (*context.operations_stream + std::string("$")
+       + std::string(nl) + *context.operations_stream);
   }
   return context;
 }
@@ -162,22 +164,24 @@ auto translate_function(Context context, const Command& command) -> ResultContex
 using SemanticFunc = std::function<ResultContext(Context, const Command&)>;
 using CommandSemanticUMap = std::unordered_map<std::string, SemanticFunc>;
 static inline auto control_flow_map = CommandSemanticUMap {
-  {"a",                 append_function},
-  {"append",            append_function},
-  {"c",                 change_function},
-  {"change",            change_function},
-  {"d",                 delete_function},
-  {"delete",            delete_function},
-  {"i",                 insert_function},
-  {"insert",            insert_function},
-  {"e",                 execute_function},
-  {"execute",           execute_function},
-  {"h",                 add_to_static_function},
-  {"add_to_static",     add_to_static_function},
-  {"g",                 replace_operation_function},
-  {"replace_operation", replace_operation_function},
-  {"y",                 translate_function},
-  {"translate",         translate_function},
+  {"a",                       append_function},
+  {"append",                  append_function},
+  {"c",                       change_function},
+  {"change",                  change_function},
+  {"d",                       delete_function},
+  {"delete",                  delete_function},
+  {"i",                       insert_function},
+  {"insert",                  insert_function},
+  {"e",                       execute_function},
+  {"execute",                 execute_function},
+  {"h",                       add_to_static_function},
+  {"add_to_static",           add_to_static_function},
+  {"g",                       replace_operation_function},
+  {"replace_operation",       replace_operation_function},
+  {"l",                       unamb_operations_stream},
+  {"unamb_operations_stream", unamb_operations_stream},
+  {"y",                       translate_function},
+  {"translate",               translate_function},
 };
 
 auto execute(const std::string& input,

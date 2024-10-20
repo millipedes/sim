@@ -262,6 +262,42 @@ That is line #5
   ASSERT_EQ(result, expected_output);
 }
 
+TEST(execution, unamb_test_0) {
+  auto result = execute(line_one_through_five, R"({"l": { } })");
+
+  auto expected_output = R"(This is line #1$
+This is line #1
+This is line #2$
+This is line #2
+This is line #3$
+This is line #3
+This is line #4$
+This is line #4
+This is line #5$
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, unamb_test_1) {
+  auto result = execute(line_one_through_five, R"({
+  "l": {
+    "address": 2
+  }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #2$
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
 TEST(execution, translation_test_1) {
   auto result = execute(line_one_through_five, R"({
   "y": {
