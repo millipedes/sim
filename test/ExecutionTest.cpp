@@ -215,7 +215,6 @@ TEST(execution, add_to_static_test_0) {
 })");
 
   auto expected_output = R"(
-
 This is line #2
 This is line #2
 This is line #2
@@ -245,7 +244,7 @@ This is line #5
   ASSERT_EQ(result, expected_output);
 }
 
-TEST(execution, nl_add_to_static_test_0) {
+TEST(execution, nl_operations_add_to_static_test_0) {
   auto result = execute(line_one_through_five, R"({
   "h": {
     "address": 2
@@ -268,7 +267,7 @@ This is line #2
   ASSERT_EQ(result, expected_output);
 }
 
-TEST(execution, nl_add_to_static_test_1) {
+TEST(execution, nl_operations_add_to_static_test_1) {
   auto result = execute(line_one_through_five, R"({
   "h": {
     "address": 2
@@ -288,6 +287,96 @@ This is line #5
 
   ASSERT_EQ(result, expected_output);
 }
+
+TEST(execution, nl_static_add_to_static_test_0) {
+  auto result = execute(line_one_through_five, R"({
+  "H": {
+    "address": 2
+  },
+  "g": { }
+})");
+
+  auto expected_output = R"(
+
+This is line #2
+
+This is line #2
+
+This is line #2
+
+This is line #2
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, nl_static_add_to_static_test_1) {
+  auto result = execute(line_one_through_five, R"({
+  "H": { },
+  "g": { }
+})");
+
+  auto expected_output = R"(
+This is line #1
+
+This is line #1
+This is line #2
+
+This is line #1
+This is line #2
+This is line #3
+
+This is line #1
+This is line #2
+This is line #3
+This is line #4
+
+This is line #1
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, nl_both_add_to_static_test_0) {
+  auto result = execute(line_one_through_five, R"({
+  "H": { },
+  "G": { }
+})");
+
+  auto expected_output = R"(This is line #1
+
+This is line #1
+This is line #2
+
+This is line #1
+This is line #2
+This is line #3
+
+This is line #1
+This is line #2
+This is line #3
+This is line #4
+
+This is line #1
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+
+This is line #1
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
 
 TEST(execution, translation_test_0) {
   auto result = execute(line_one_through_five, R"({

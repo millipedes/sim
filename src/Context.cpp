@@ -113,17 +113,16 @@ auto add_to_static_function(Context context, const Command& command) -> ResultCo
   return context;
 }
 
-auto nl_replace_operation_function(Context context, const Command& command) -> ResultContext {
+auto nl_add_to_static_function(Context context, const Command& command) -> ResultContext {
   if (command.arguments) {
-    std::cerr << "nl_replace_operation_function: the nl_replace_operation command does not "
+    std::cerr << "add_to_static_function: the add_to_static command does not "
       "take arguments ignoring them" << std::endl;
   }
 
   if (command.address && context.cycle == *command.address || !command.address) {
-    context.operations_stream = *context.operations_stream + std::string(nl);
-    if (context.static_stream) {
-      context.operations_stream = *context.operations_stream + *context.static_stream;
-    }
+    context.static_stream = context.static_stream
+      ? *context.static_stream + std::string(nl) + *context.operations_stream
+      : std::string(nl) + *context.operations_stream;
   }
   return context;
 }
@@ -136,7 +135,22 @@ auto replace_operation_function(Context context, const Command& command) -> Resu
 
   if (command.address && context.cycle == *command.address || !command.address) {
     context.operations_stream = context.static_stream
-      ? context.static_stream : std::string(nl);
+      ? context.static_stream : "";
+  }
+  return context;
+}
+
+auto nl_replace_operation_function(Context context, const Command& command) -> ResultContext {
+  if (command.arguments) {
+    std::cerr << "nl_replace_operation_function: the nl_replace_operation command does not "
+      "take arguments ignoring them" << std::endl;
+  }
+
+  if (command.address && context.cycle == *command.address || !command.address) {
+    context.operations_stream = *context.operations_stream + std::string(nl);
+    if (context.static_stream) {
+      context.operations_stream = *context.operations_stream + *context.static_stream;
+    }
   }
   return context;
 }
@@ -191,6 +205,8 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"execute",                 execute_function},
   {"h",                       add_to_static_function},
   {"add_to_static",           add_to_static_function},
+  {"H",                       nl_add_to_static_function},
+  {"nl_add_to_static",        nl_add_to_static_function},
   {"g",                       replace_operation_function},
   {"replace_operation",       replace_operation_function},
   {"G",                       nl_replace_operation_function},
