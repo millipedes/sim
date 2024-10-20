@@ -559,6 +559,44 @@ The is line #5
   ASSERT_EQ(result, expected_output);
 }
 
+TEST(execution, prepend_line_no_test_0) {
+  auto result = execute(line_one_through_five, R"({
+  "=": { }
+})");
+
+  auto expected_output = R"(1
+This is line #1
+2
+This is line #2
+3
+This is line #3
+4
+This is line #4
+5
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, prepend_line_no_test_1) {
+  auto result = execute(line_one_through_five, R"({
+  "=": {
+    "address": 2
+  }
+})");
+
+  auto expected_output = R"(This is line #1
+2
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
 TEST(execution, combination_command_test_0) {
   auto result = execute(line_one_through_five, R"({
   "d": {

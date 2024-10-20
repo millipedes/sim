@@ -206,6 +206,22 @@ auto nl_print_operations_function(Context context, const Command& command) -> Re
   return context;
 }
 
+auto assert_version_function(Context context, const Command& command) -> ResultContext {
+  if (!command.arguments) {
+    return tl::make_unexpected("assert_version_function: no arguments provided");
+  } else if (command.arguments->size() != 1) {
+    return tl::make_unexpected("assert_version_function: translate expects 1 argument");
+  }
+
+  if ((*command.arguments)[0] != sedim_version) {
+    return tl::make_unexpected(
+        std::string("assert_version_function: version required: ")
+        + (*command.arguments)[0]
+        + std::string(" does not match current version: ")
+        + std::string(sedim_version));
+  }
+  return context;
+}
 
 auto translate_function(Context context, const Command& command) -> ResultContext {
   if (!command.arguments) {
@@ -225,19 +241,15 @@ auto translate_function(Context context, const Command& command) -> ResultContex
   return context;
 }
 
-auto assert_version_function(Context context, const Command& command) -> ResultContext {
-  if (!command.arguments) {
-    return tl::make_unexpected("assert_version_function: no arguments provided");
-  } else if (command.arguments->size() != 1) {
-    return tl::make_unexpected("assert_version_function: translate expects 1 argument");
+auto prepend_line_no_function(Context context, const Command& command) -> ResultContext {
+  if (command.arguments) {
+    std::cerr << "prepend_line_no_function: the prepend_line_no command does not "
+      "take arguments ignoring them" << std::endl;
   }
 
-  if ((*command.arguments)[0] != sedim_version) {
-    return tl::make_unexpected(
-        std::string("assert_version_function: version required: ")
-        + (*command.arguments)[0]
-        + std::string(" does not match current version: ")
-        + std::string(sedim_version));
+  if (command.address && context.cycle == *command.address || !command.address) {
+    context.operations_stream = std::to_string(context.cycle)
+      + std::string(nl) + *context.operations_stream;
   }
   return context;
 }
@@ -273,6 +285,8 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"required_version",        assert_version_function},
   {"y",                       translate_function},
   {"translate",               translate_function},
+  {"=",                       prepend_line_no_function},
+  {"prepend_line_no",         prepend_line_no_function},
 };
 
 auto execute(const std::string& input,
