@@ -234,6 +234,20 @@ auto assert_version_function(Context context, const Command& command) -> ResultC
   return context;
 }
 
+auto exchange_function(Context context, const Command& command) -> ResultContext {
+  if (command.arguments) {
+    std::cerr << "exchange_function: the exchange command does not take "
+      "arguments ignoring them" << std::endl;
+  }
+
+  if (command.address && context.cycle == *command.address || !command.address) {
+    auto tmp = *context.operations_stream;
+    context.operations_stream = context.static_stream;
+    context.static_stream = tmp;
+  }
+  return context;
+}
+
 auto translate_function(Context context, const Command& command) -> ResultContext {
   if (!command.arguments) {
     return tl::make_unexpected("translate_function: no arguments provided");
@@ -309,6 +323,8 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"quit",                    quit_function},
   {"v",                       assert_version_function},
   {"required_version",        assert_version_function},
+  {"x",                       exchange_function},
+  {"exchange",                exchange_function},
   {"y",                       translate_function},
   {"translate",               translate_function},
   {"z",                       zap_function},

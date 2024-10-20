@@ -508,6 +508,50 @@ TEST(execution, version_test_0) {
   }
 }
 
+TEST(execution, exchange_test_0) {
+  auto result = execute(line_one_through_five, R"({
+  "h": {
+    "address": 1
+  },
+  "x": {
+    "address": 3
+  },
+  "g": { }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #1
+This is line #3
+This is line #3
+This is line #3
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, exchange_test_1) {
+  auto result = execute(line_one_through_five, R"({
+  "h": {
+    "address": 1
+  },
+  "x": {
+    "address": 3
+  },
+  "g": {
+    "address": 4
+  }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #2
+This is line #1
+This is line #3
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
 TEST(execution, translation_test_0) {
   auto result = execute(line_one_through_five, R"({
   "y": {
