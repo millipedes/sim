@@ -113,6 +113,21 @@ auto add_to_static_function(Context context, const Command& command) -> ResultCo
   return context;
 }
 
+auto nl_replace_operation_function(Context context, const Command& command) -> ResultContext {
+  if (command.arguments) {
+    std::cerr << "nl_replace_operation_function: the nl_replace_operation command does not "
+      "take arguments ignoring them" << std::endl;
+  }
+
+  if (command.address && context.cycle == *command.address || !command.address) {
+    context.operations_stream = *context.operations_stream + std::string(nl);
+    if (context.static_stream) {
+      context.operations_stream = *context.operations_stream + *context.static_stream;
+    }
+  }
+  return context;
+}
+
 auto replace_operation_function(Context context, const Command& command) -> ResultContext {
   if (command.arguments) {
     std::cerr << "replace_operation_function: the replace_operation command does not "
@@ -178,6 +193,8 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"add_to_static",           add_to_static_function},
   {"g",                       replace_operation_function},
   {"replace_operation",       replace_operation_function},
+  {"G",                       nl_replace_operation_function},
+  {"nl_replace_operation",    nl_replace_operation_function},
   {"l",                       unamb_operations_stream},
   {"unamb_operations_stream", unamb_operations_stream},
   {"y",                       translate_function},
