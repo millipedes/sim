@@ -245,6 +245,57 @@ This is line #5
   ASSERT_EQ(result, expected_output);
 }
 
+TEST(execution, translation_test_0) {
+  auto result = execute(line_one_through_five, R"({
+  "y": {
+    "arguments": ["This", "That"]
+  }
+})");
+
+  auto expected_output = R"(That is line #1
+That is line #2
+That is line #3
+That is line #4
+That is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, translation_test_1) {
+  auto result = execute(line_one_through_five, R"({
+  "y": {
+    "arguments": ["This is", "These are"]
+  }
+})");
+
+  auto expected_output = R"(These are line #1
+These are line #2
+These are line #3
+These are line #4
+These are line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, translation_test_2) {
+  auto result = execute(line_one_through_five, R"({
+  "y": {
+    "arguments": ["This", "The"]
+  }
+})");
+
+  auto expected_output = R"(The is line #1
+The is line #2
+The is line #3
+The is line #4
+The is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
 TEST(execution, combination_command_test_0) {
   auto result = execute(line_one_through_five, R"({
   "d": {
