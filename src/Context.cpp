@@ -5,6 +5,8 @@
 #include <memory>
 #include <ranges>
 
+#include "Version.h"
+
 // We want to be able to handle/give context to errors when running sedim
 // scripts
 using ResultContext = tl::expected<Context, std::string>;
@@ -209,7 +211,7 @@ auto translate_function(Context context, const Command& command) -> ResultContex
   if (!command.arguments) {
     return tl::make_unexpected("translate_function: no arguments provided");
   } else if (command.arguments->size() != 2) {
-    return tl::make_unexpected("translate_function: translate expects 1 argument");
+    return tl::make_unexpected("translate_function: translate expects 2 argument");
   }
 
   size_t pos = 0;
@@ -220,6 +222,23 @@ auto translate_function(Context context, const Command& command) -> ResultContex
     pos += (*command.arguments)[1].length();
   }
 
+  return context;
+}
+
+auto assert_version_function(Context context, const Command& command) -> ResultContext {
+  if (!command.arguments) {
+    return tl::make_unexpected("assert_version_function: no arguments provided");
+  } else if (command.arguments->size() != 1) {
+    return tl::make_unexpected("assert_version_function: translate expects 1 argument");
+  }
+
+  if ((*command.arguments)[0] != sedim_version) {
+    return tl::make_unexpected(
+        std::string("assert_version_function: version required: ")
+        + (*command.arguments)[0]
+        + std::string(" does not match current version: ")
+        + std::string(sedim_version));
+  }
   return context;
 }
 
@@ -250,6 +269,8 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"print",                   print_operations_function},
   {"P",                       nl_print_operations_function},
   {"nl_print",                nl_print_operations_function},
+  {"v",                       assert_version_function},
+  {"required_version",        assert_version_function},
   {"y",                       translate_function},
   {"translate",               translate_function},
 };

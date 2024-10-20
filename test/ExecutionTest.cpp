@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "Context.h"
+#include "Version.h"
 
 constexpr static auto line_one_through_five = R"(This is line #1
 This is line #2
@@ -378,23 +379,6 @@ This is line #5
 }
 
 
-TEST(execution, translation_test_0) {
-  auto result = execute(line_one_through_five, R"({
-  "y": {
-    "arguments": ["This", "That"]
-  }
-})");
-
-  auto expected_output = R"(That is line #1
-That is line #2
-That is line #3
-That is line #4
-That is line #5
-)";
-
-  ASSERT_EQ(result, expected_output);
-}
-
 TEST(execution, unamb_test_0) {
   auto result = execute(line_one_through_five, R"({"l": { } })");
 
@@ -503,6 +487,39 @@ This is line #2
 This is line #3
 This is line #4
 This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, version_test_0) {
+  try {
+    auto result = execute(line_one_through_five, R"({
+    "v": {
+      "arguments": ["9.9.9"]
+    }
+})");
+  } catch (const std::runtime_error& e) {
+    EXPECT_STREQ((std::string("execute: unable to execute command: "
+            "assert_version_function: version required: 9.9.9 does not match "
+            "current version: ") + std::string(sedim_version)).c_str(), e.what());
+  } catch (...) {
+    FAIL() << "Expected std::runtime_error";
+  }
+}
+
+TEST(execution, translation_test_0) {
+  auto result = execute(line_one_through_five, R"({
+  "y": {
+    "arguments": ["This", "That"]
+  }
+})");
+
+  auto expected_output = R"(That is line #1
+That is line #2
+That is line #3
+That is line #4
+That is line #5
 )";
 
   ASSERT_EQ(result, expected_output);
