@@ -252,6 +252,18 @@ auto translate_function(Context context, const Command& command) -> ResultContex
   return context;
 }
 
+auto zap_function(Context context, const Command& command) -> ResultContext {
+  if (command.arguments) {
+    std::cerr << "zap_function: the zap command does not take arguments "
+      "ignoring them" << std::endl;
+  }
+
+  if (command.address && context.cycle == *command.address || !command.address) {
+    context.operations_stream = "";
+  }
+  return context;
+}
+
 auto prepend_line_no_function(Context context, const Command& command) -> ResultContext {
   if (command.arguments) {
     std::cerr << "prepend_line_no_function: the prepend_line_no command does not "
@@ -299,6 +311,8 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"required_version",        assert_version_function},
   {"y",                       translate_function},
   {"translate",               translate_function},
+  {"z",                       zap_function},
+  {"zap",                     zap_function},
   {"=",                       prepend_line_no_function},
   {"prepend_line_no",         prepend_line_no_function},
 };

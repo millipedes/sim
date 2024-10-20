@@ -559,6 +559,38 @@ The is line #5
   ASSERT_EQ(result, expected_output);
 }
 
+TEST(execution, zap_test_0) {
+  auto result = execute(line_one_through_five, R"({
+  "z": { }
+})");
+
+  auto expected_output = R"(
+
+
+
+
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, zap_test_1) {
+  auto result = execute(line_one_through_five, R"({
+  "z": {
+    "address": 2
+  }
+})");
+
+  auto expected_output = R"(This is line #1
+
+This is line #3
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
 TEST(execution, prepend_line_no_test_0) {
   auto result = execute(line_one_through_five, R"({
   "=": { }
