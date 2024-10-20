@@ -155,13 +155,13 @@ auto nl_replace_operation_function(Context context, const Command& command) -> R
   return context;
 }
 
-auto unamb_operations_stream(Context context, const Command& command) -> ResultContext {
+auto unamb_operations_function(Context context, const Command& command) -> ResultContext {
   if (command.arguments) {
-    std::cerr << "print_operations_function: the print_operations command does not "
+    std::cerr << "unamb_operations_function: the unamb_operations command does not "
       "take arguments ignoring them" << std::endl;
   }
   if (!context.operations_stream) {
-    return tl::make_unexpected("unamb_operations_stream: operations_stream holds "
+    return tl::make_unexpected("unamb_operations_function: operations_stream holds "
         "no value");
   }
   if (command.address && context.cycle == *command.address || !command.address) {
@@ -171,6 +171,39 @@ auto unamb_operations_stream(Context context, const Command& command) -> ResultC
   }
   return context;
 }
+
+auto print_operations_function(Context context, const Command& command) -> ResultContext {
+  if (command.arguments) {
+    std::cerr << "print_operations_function: the print_operations command does not "
+      "take arguments ignoring them" << std::endl;
+  }
+
+  if (command.address && context.cycle == *command.address || !command.address) {
+    context.operations_stream = *context.operations_stream
+      + std::string(nl) + *context.operations_stream;
+  }
+  return context;
+}
+
+auto nl_print_operations_function(Context context, const Command& command) -> ResultContext {
+  if (command.arguments) {
+    std::cerr << "nl_print_operations_function: the nl_print_operations command does not "
+      "take arguments ignoring them" << std::endl;
+  }
+
+  if (command.address && context.cycle == *command.address || !command.address) {
+    size_t pos;
+    if ((pos = context.stream.find(nl)) != std::string_view::npos) {
+      context.operations_stream = *context.operations_stream
+        + std::string(nl) + context.operations_stream->substr(0, pos);
+    } else {
+      context.operations_stream = *context.operations_stream
+        + std::string(nl) + *context.operations_stream;
+    }
+  }
+  return context;
+}
+
 
 auto translate_function(Context context, const Command& command) -> ResultContext {
   if (!command.arguments) {
@@ -211,8 +244,12 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"replace_operation",       replace_operation_function},
   {"G",                       nl_replace_operation_function},
   {"nl_replace_operation",    nl_replace_operation_function},
-  {"l",                       unamb_operations_stream},
-  {"unamb_operations_stream", unamb_operations_stream},
+  {"l",                       unamb_operations_function},
+  {"unamb_operations_stream", unamb_operations_function},
+  {"p",                       print_operations_function},
+  {"print",                   print_operations_function},
+  {"P",                       nl_print_operations_function},
+  {"nl_print",                nl_print_operations_function},
   {"y",                       translate_function},
   {"translate",               translate_function},
 };

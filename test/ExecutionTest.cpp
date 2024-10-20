@@ -431,6 +431,83 @@ This is line #5
   ASSERT_EQ(result, expected_output);
 }
 
+
+TEST(execution, print_test_0) {
+  auto result = execute(line_one_through_five, R"({
+  "p": { }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #1
+This is line #2
+This is line #2
+This is line #3
+This is line #3
+This is line #4
+This is line #4
+This is line #5
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, print_test_1) {
+  auto result = execute(line_one_through_five, R"({
+  "p": {
+    "address": 1
+  }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #1
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, nl_print_test_0) {
+  auto result = execute(line_one_through_five, R"({
+  "P": { }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #1
+This is line #2
+This is line #2
+This is line #3
+This is line #3
+This is line #4
+This is line #4
+This is line #5
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, nl_print_test_1) {
+  auto result = execute(line_one_through_five, R"({
+  "P": {
+    "address": 1
+  }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #1
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
 TEST(execution, translation_test_1) {
   auto result = execute(line_one_through_five, R"({
   "y": {
