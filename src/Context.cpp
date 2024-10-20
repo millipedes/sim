@@ -206,6 +206,17 @@ auto nl_print_operations_function(Context context, const Command& command) -> Re
   return context;
 }
 
+auto quit_function(Context context, const Command& command) -> ResultContext {
+  if (!command.arguments) {
+    std::cerr << "quit_function: no arguments provided, exiting with code 1"
+      << std::endl;
+  } else if (command.arguments->size() != 1) {
+    std::cerr << "quit_function: quit expects 1 argument, exiting with code 1"
+      << std::endl;
+  }
+  std::exit(std::stoi((*command.arguments)[0]));
+}
+
 auto assert_version_function(Context context, const Command& command) -> ResultContext {
   if (!command.arguments) {
     return tl::make_unexpected("assert_version_function: no arguments provided");
@@ -281,6 +292,9 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"print",                   print_operations_function},
   {"P",                       nl_print_operations_function},
   {"nl_print",                nl_print_operations_function},
+  {"q",                       quit_function},
+  {"Q",                       quit_function},
+  {"quit",                    quit_function},
   {"v",                       assert_version_function},
   {"required_version",        assert_version_function},
   {"y",                       translate_function},
