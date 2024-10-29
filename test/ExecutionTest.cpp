@@ -804,7 +804,7 @@ This is line #5
   ASSERT_EQ(result, expected_output);
 }
 
-TEST(execution, substitue_test_0) {
+TEST(execution, substitute_test_0) {
   auto result = execute(R"(The fox is quick
 The dog is quick
 )", R"({
@@ -820,7 +820,7 @@ The dog is swift
   ASSERT_EQ(result, expected_output);
 }
 
-TEST(execution, substitue_test_1) {
+TEST(execution, substitute_test_1) {
   auto result = execute(R"(The date is 12/01/2023
 The date will be 01/15/2024
 )", R"({
@@ -836,7 +836,7 @@ The date will be 2024-01-15
   ASSERT_EQ(result, expected_output);
 }
 
-TEST(execution, substitue_test_2) {
+TEST(execution, substitute_test_2) {
   auto result = execute(R"(The date is 12/01/2023
 The date will be 01/15/2024
 )", R"({
@@ -848,6 +848,58 @@ The date will be 01/15/2024
 
   auto expected_output = R"(The date is 2023-12-01
 The date will be 01/15/2024
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, branch_true_test_0) {
+  auto result = execute(R"(Hello world
+This is a message to the world
+That sim is complete for the world to use!
+)", R"({
+  "s": {
+    "arguments": ["world", "universe"]
+  },
+  "t": {
+    "arguments": ["test"]
+  },
+  "p": { },
+  ":": {
+    "arguments": ["test"]
+  },
+  "d": { }
+})");
+
+  auto expected_output = "";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, branch_true_test_1) {
+  auto result = execute(R"(Hello world
+This is a message to the world
+That sim is complete for the world to use!
+)", R"({
+  "s": {
+    "arguments": ["world", "universe"]
+  },
+  "t": {
+    "arguments": ["test"]
+  },
+  "d": { },
+  ":": {
+    "arguments": ["test"]
+  },
+  "p": { }
+})");
+
+  auto expected_output = R"(Hello universe
+Hello universe
+This is a message to the universe
+This is a message to the universe
+That sim is complete for the universe to use!
+That sim is complete for the universe to use!
 )";
 
   ASSERT_EQ(result, expected_output);
@@ -1131,4 +1183,44 @@ This is line #5
 )";
 
   ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, verify_label_test_0) {
+  try {
+    auto result = execute(line_one_through_five, R"({ ":": { } })");
+  } catch (const std::runtime_error& e) {
+    EXPECT_STREQ("execute: unable to execute command: verify_label_function: "
+        "no arguments provided", e.what());
+  } catch (...) {
+    FAIL() << "Expected std::runtime_error";
+  }
+}
+
+TEST(execution, verify_label_test_1) {
+  try {
+    auto result = execute(line_one_through_five, R"({ ":": {
+      "arguments": ["this should", "fail"]
+    }
+})");
+  } catch (const std::runtime_error& e) {
+    EXPECT_STREQ("execute: unable to execute command: verify_label_function: "
+        "label expects 1 argument", e.what());
+  } catch (...) {
+    FAIL() << "Expected std::runtime_error";
+  }
+}
+
+TEST(execution, verify_label_test_2) {
+  try {
+    auto result = execute(line_one_through_five, R"({ ":": {
+      "arguments": ["this should fail"],
+      "address": 1
+    }
+})");
+  } catch (const std::runtime_error& e) {
+    EXPECT_STREQ("execute: unable to execute command: verify_label_function: "
+        "label expects no address", e.what());
+  } catch (...) {
+    FAIL() << "Expected std::runtime_error";
+  }
 }

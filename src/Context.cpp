@@ -262,8 +262,8 @@ auto print_operations_function(Context context, const Command& command) -> Resul
   }
 
   if (command.address && context.cycle == *command.address || !command.address) {
-    context.operations_stream = *context.operations_stream
-      + std::string(nl) + *context.operations_stream;
+    context.result += *context.operations_stream
+      + std::string(nl);
   }
   return context;
 }
@@ -371,8 +371,49 @@ auto substitute_function(Context context, const Command& command) -> ResultConte
   }
 
   if (command.address && context.cycle == *command.address || !command.address) {
+    auto tmp = (*context.operations_stream);
     (*context.operations_stream) = std::regex_replace(*context.operations_stream,
         std::regex((*command.arguments)[0]), (*command.arguments)[1]);
+    if (tmp != (*context.operations_stream)) {
+      context.last_replace_success = true;
+    } else {
+      context.last_replace_success = false;
+    }
+  }
+
+  return context;
+}
+
+auto find_label_index(const Context& context,
+    const std::string label) -> std::optional<uint64_t> {
+  for (uint64_t i = 0; i < context.commands.size(); i++) {
+    const auto& command = context.commands[i];
+    if (command.arguments
+        && command.arguments->size() == 1
+        && (command.name == ":" || command.name == "label")
+        && (*command.arguments)[0] == label) {
+      return i;
+    }
+  }
+  return std::nullopt;
+}
+
+auto branch_true_function(Context context, const Command& command) -> ResultContext {
+  if (!command.arguments) {
+    return tl::make_unexpected("branch_true_function: no arguments provided");
+  } else if (command.arguments->size() != 1) {
+    return tl::make_unexpected("branch_true_function: branch_true expects 1 argument");
+  }
+
+  auto maybe_label = find_label_index(context, (*command.arguments)[0]);
+  if (!maybe_label) {
+    return tl::make_unexpected(std::string("branch_true_function: unable to "
+          "find label ") + (*command.arguments)[0]);
+  }
+  if (context.last_replace_success) {
+    context.current_command = *maybe_label;
+  } else {
+    context.current_command = context.commands.size();
   }
 
   return context;
@@ -498,6 +539,18 @@ auto prepend_line_no_function(Context context, const Command& command) -> Result
   return context;
 }
 
+auto verify_label_function(Context context, const Command& command) -> ResultContext {
+  if (!command.arguments) {
+    return tl::make_unexpected("verify_label_function: no arguments provided");
+  } else if (command.arguments->size() != 1) {
+    return tl::make_unexpected("verify_label_function: label expects 1 argument");
+  }
+  if (command.address) {
+    return tl::make_unexpected("verify_label_function: label expects no address");
+  }
+  return context;
+}
+
 using SemanticFunc = std::function<ResultContext(Context, const Command&)>;
 using CommandSemanticUMap = std::unordered_map<std::string, SemanticFunc>;
 static inline auto control_flow_map = CommandSemanticUMap {
@@ -542,6 +595,8 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"read_in_file_line",           read_in_file_line_function},
   {"s",                           substitute_function},
   {"substitute",                  substitute_function},
+  {"t",                           branch_true_function},
+  {"branch_true",                 branch_true_function},
   {"v",                           assert_version_function},
   {"required_version",            assert_version_function},
   {"w",                           append_to_file_function},
@@ -556,6 +611,8 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"zap",                         zap_function},
   {"=",                           prepend_line_no_function},
   {"prepend_line_no",             prepend_line_no_function},
+  {":",                           verify_label_function},
+  {"label",                       verify_label_function},
 };
 
 auto execute_from_files(const std::string& input_file,
@@ -591,6 +648,7 @@ auto execute(const std::string& input_text, const std::string& command_text,
     context.operations_stream = context.file_stream.second.substr(0, pos);
     context.file_stream.second = context.file_stream.second.substr(pos + 1);
     context.cycle++;
+    context.last_replace_success = false;
     context.current_command = 0;
     while (context.current_command < context.commands.size()) {
       const auto& command = context.commands[context.current_command];

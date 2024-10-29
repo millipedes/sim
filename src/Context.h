@@ -40,6 +40,7 @@ struct Context {
   std::string result;
   uint64_t cycle;
   uint64_t current_command;
+  bool last_replace_success;
 
   Context(const std::pair<std::optional<std::string>, std::string>& file_stream)
     : file_stream(file_stream),
@@ -49,7 +50,8 @@ struct Context {
       commands(Commands()),
       result(std::string()),
       cycle(0),
-      current_command(0) {}
+      current_command(0),
+      last_replace_success(false) {}
 
   // destructor
   ~Context() {
@@ -70,7 +72,8 @@ struct Context {
       commands(other.commands),
       result(other.result),
       cycle(other.cycle),
-      current_command(other.current_command) {
+      current_command(other.current_command),
+      last_replace_success(other.last_replace_success) {
         for (auto& [name, stream] : other.stream_map) {
           stream_map[name] = std::fstream(name);
           if (!stream_map[name]) {
@@ -102,6 +105,7 @@ struct Context {
       result = other.result;
       cycle = other.cycle;
       current_command = other.current_command;
+      last_replace_success = other.last_replace_success;
     }
     return *this;
   }
@@ -115,7 +119,8 @@ struct Context {
       commands(std::move(other.commands)),
       result(std::move(other.result)),
       cycle(other.cycle),
-      current_command(other.current_command) {}
+      current_command(other.current_command),
+      last_replace_success(other.last_replace_success) {}
 
   // move assignment
   auto operator=(Context&& other) noexcept -> Context& {
@@ -128,6 +133,7 @@ struct Context {
       result = std::move(other.result);
       cycle = other.cycle;
       current_command = other.current_command;
+      last_replace_success = other.last_replace_success;
     }
     return *this;
   }
