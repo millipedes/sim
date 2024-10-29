@@ -13,7 +13,7 @@ knowledge of how the codebase works.
 # :notebook: sim Model of Execution
 As it is currently set up the way in which you interface with `sim` is via a
 json schema with the file which you wish to edit (streams will be supported at
-some point in the future see #1) Let's go through an in depth example:
+some point in the future see #1. Let's go through an in depth example:
 
 ![Model of Execution](./figures/model_of_execution/model_of_execution.png)
 
