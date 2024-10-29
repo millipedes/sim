@@ -905,6 +905,104 @@ That sim is complete for the universe to use!
   ASSERT_EQ(result, expected_output);
 }
 
+TEST(execution, branch_true_test_2) {
+  auto result = execute(R"(Hello world
+This is a message to the world
+That sim is complete for the world to use!
+)", R"({
+  "s": {
+    "arguments": ["world", "universe"]
+  },
+  "t": {
+    "arguments": ["test"]
+  },
+  "d": { },
+  "p": { }
+})");
+
+  auto expected_output = R"(Hello universe
+This is a message to the universe
+That sim is complete for the universe to use!
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, branch_false_test_0) {
+  auto result = execute(R"(Hello world
+This is a message to the world
+That sim is complete for the world to use!
+)", R"({
+  "s": {
+    "arguments": ["World", "universe"]
+  },
+  "T": {
+    "arguments": ["test"]
+  },
+  "p": { },
+  ":": {
+    "arguments": ["test"]
+  },
+  "d": { }
+})");
+
+  auto expected_output = "";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, branch_false_test_1) {
+  auto result = execute(R"(Hello world
+This is a message to the world
+That sim is complete for the world to use!
+)", R"({
+  "s": {
+    "arguments": ["World", "universe"]
+  },
+  "T": {
+    "arguments": ["test"]
+  },
+  "d": { },
+  ":": {
+    "arguments": ["test"]
+  },
+  "p": { }
+})");
+
+  auto expected_output = R"(Hello world
+Hello world
+This is a message to the world
+This is a message to the world
+That sim is complete for the world to use!
+That sim is complete for the world to use!
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, branch_false_test_2) {
+  auto result = execute(R"(Hello world
+This is a message to the world
+That sim is complete for the world to use!
+)", R"({
+  "s": {
+    "arguments": ["world", "universe"]
+  },
+  "T": {
+    "arguments": ["test"]
+  },
+  "d": { },
+  "p": { }
+})");
+
+  auto expected_output = R"(Hello universe
+This is a message to the universe
+That sim is complete for the universe to use!
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
 TEST(execution, version_test_0) {
   try {
     auto result = execute(line_one_through_five, R"({

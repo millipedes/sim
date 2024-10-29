@@ -407,13 +407,26 @@ auto branch_true_function(Context context, const Command& command) -> ResultCont
 
   auto maybe_label = find_label_index(context, (*command.arguments)[0]);
   if (!maybe_label) {
-    return tl::make_unexpected(std::string("branch_true_function: unable to "
-          "find label ") + (*command.arguments)[0]);
-  }
-  if (context.last_replace_success) {
-    context.current_command = *maybe_label;
-  } else {
     context.current_command = context.commands.size();
+  } else if (context.last_replace_success) {
+    context.current_command = *maybe_label;
+  }
+
+  return context;
+}
+
+auto branch_false_function(Context context, const Command& command) -> ResultContext {
+  if (!command.arguments) {
+    return tl::make_unexpected("branch_false_function: no arguments provided");
+  } else if (command.arguments->size() != 1) {
+    return tl::make_unexpected("branch_false_function: branch_false expects 1 argument");
+  }
+
+  auto maybe_label = find_label_index(context, (*command.arguments)[0]);
+  if (!maybe_label) {
+    context.current_command = context.commands.size();
+  } else if (!context.last_replace_success) {
+    context.current_command = *maybe_label;
   }
 
   return context;
@@ -597,6 +610,8 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"substitute",                  substitute_function},
   {"t",                           branch_true_function},
   {"branch_true",                 branch_true_function},
+  {"T",                           branch_false_function},
+  {"branch_false",                branch_false_function},
   {"v",                           assert_version_function},
   {"required_version",            assert_version_function},
   {"w",                           append_to_file_function},
