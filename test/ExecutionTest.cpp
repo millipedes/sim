@@ -1128,7 +1128,7 @@ TEST(execution, version_test_0) {
   } catch (const std::runtime_error& e) {
     EXPECT_STREQ((std::string("execute: unable to execute command: "
             "assert_version_function: version required: 9.9.9 does not match "
-            "current version: ") + std::string(sedim_version)).c_str(), e.what());
+            "current version: ") + std::string(sim_version)).c_str(), e.what());
   } catch (...) {
     FAIL() << "Expected std::runtime_error";
   }

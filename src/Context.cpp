@@ -8,7 +8,7 @@
 
 #include "Version.h"
 
-// We want to be able to handle/give context to errors when running sedim
+// We want to be able to handle/give context to errors when running sim
 // scripts
 using ResultContext = tl::expected<Context, std::string>;
 
@@ -463,12 +463,12 @@ auto assert_version_function(Context context, const Command& command) -> ResultC
         "1 argument");
   }
 
-  if ((*command.arguments)[0] != sedim_version) {
+  if ((*command.arguments)[0] != sim_version) {
     return tl::make_unexpected(
         std::string("assert_version_function: version required: ")
         + (*command.arguments)[0]
         + std::string(" does not match current version: ")
-        + std::string(sedim_version));
+        + std::string(sim_version));
   }
   return context;
 }

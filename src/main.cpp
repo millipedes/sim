@@ -4,7 +4,7 @@
 
 int main (int argc, char* argv[]) {
   if (argc != 3) {
-    throw std::runtime_error("sedim requires two arguments: input, json script");
+    throw std::runtime_error("sim requires two arguments: input, json script");
   }
 
   std::cout << execute_from_files(argv[1], argv[2]);
