@@ -1,9 +1,10 @@
 #include "Context.h"
 
 #include <iostream>
-#include <functional>
 #include <memory>
 #include <ranges>
+#include <regex>
+#include <sstream>
 
 #include "Version.h"
 
@@ -40,7 +41,7 @@ auto change_function(Context context, const Command& command) -> ResultContext {
 
 auto delete_function(Context context, const Command& command) -> ResultContext {
   if (command.arguments) {
-    std::cout << "delete_function: the delete command does not take arguments "
+    std::cerr << "delete_function: warning: the delete command does not take arguments "
       "ignoring them" << std::endl;
   }
   if (command.address && context.cycle == *command.address || !command.address) {
@@ -69,14 +70,13 @@ auto execute_function(Context context, const Command& command) -> ResultContext 
       "supported for linux");
 #else
   if (command.arguments) {
-    std::cout << "execute_function: the execute command does not take arguments "
+    std::cerr << "execute_function: warning: the execute command does not take arguments "
       "ignoring them" << std::endl;
   }
 
   std::array<char, 128> buffer;
   std::string result;
   auto full_command = *context.operations_stream;
-
 
   if (command.address && context.cycle == *command.address) {
     std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(full_command.c_str(), "r"), pclose);
@@ -88,7 +88,7 @@ auto execute_function(Context context, const Command& command) -> ResultContext 
     }
     context.operations_stream = result;
   } else if (!command.address) {
-    std::cout << "execute_function: warning: whole input file is being "
+    std::cerr << "execute_function: warning: whole input file is being "
       "executed, just write a shell script?" << std::endl;
     std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(full_command.c_str(), "r"), pclose);
     if (!pipe) {
@@ -101,6 +101,24 @@ auto execute_function(Context context, const Command& command) -> ResultContext 
   }
   return context;
 #endif
+}
+
+auto prepend_file_name_function(Context context, const Command& command) -> ResultContext {
+  if (command.arguments) {
+    std::cerr << "prepend_file_name_function: the prepend_file_name command does not "
+      "take arguments ignoring them" << std::endl;
+  }
+
+  if (command.address && context.cycle == *command.address || !command.address) {
+    if (context.file_stream.first) {
+      (*context.operations_stream) = *context.file_stream.first
+        + std::string(nl) + *context.operations_stream;
+    } else {
+      std::cerr << "prepend_file_name_function: no registered input file, did "
+        "you forget to assign it in a test?" << std::endl;
+    }
+  }
+  return context;
 }
 
 auto add_to_static_function(Context context, const Command& command) -> ResultContext {
@@ -174,6 +192,23 @@ auto unamb_operations_function(Context context, const Command& command) -> Resul
   return context;
 }
 
+auto next_operation_space_function(Context context, const Command& command) -> ResultContext {
+  if (command.arguments) {
+    std::cerr << "next_operation_space_function: the next_operation_space command "
+      "does not take arguments ignoring them" << std::endl;
+  }
+  size_t pos = 0;
+  if (command.address && context.cycle == *command.address || !command.address) {
+    if ((pos = context.file_stream.second.find(nl)) != std::string::npos) {
+      (*context.operations_stream)
+        += (std::string(nl) + std::string(context.file_stream.second.substr(0, pos)));
+      context.file_stream.second = context.file_stream.second.substr(pos + 1);
+    }
+  }
+
+  return context;
+}
+
 auto print_operations_function(Context context, const Command& command) -> ResultContext {
   if (command.arguments) {
     std::cerr << "print_operations_function: the print_operations command does not "
@@ -195,7 +230,7 @@ auto nl_print_operations_function(Context context, const Command& command) -> Re
 
   if (command.address && context.cycle == *command.address || !command.address) {
     size_t pos;
-    if ((pos = context.stream.find(nl)) != std::string_view::npos) {
+    if ((pos = context.file_stream.second.find(nl)) != std::string::npos) {
       context.operations_stream = *context.operations_stream
         + std::string(nl) + context.operations_stream->substr(0, pos);
     } else {
@@ -217,11 +252,91 @@ auto quit_function(Context context, const Command& command) -> ResultContext {
   std::exit(std::stoi((*command.arguments)[0]));
 }
 
+auto read_in_file_function(Context context, const Command& command) -> ResultContext {
+  if (!command.arguments) {
+    return tl::make_unexpected("read_in_file_function: no arguments provided");
+  } else if (command.arguments->size() != 1) {
+    return tl::make_unexpected("read_in_file_function: read_in_file expects 1 argument");
+  }
+
+  if (command.address && context.cycle == *command.address || !command.address) {
+    if (context.stream_map.contains((*command.arguments)[0])) {
+      if (!context.stream_map[(*command.arguments)[0]].is_open()) {
+        return tl::make_unexpected("read_in_file_function: file exists in "
+            "stream_map but is not open");
+      }
+
+      // reset it in case the file has already been read
+      context.stream_map[(*command.arguments)[0]].clear();
+      context.stream_map[(*command.arguments)[0]].seekg(0);
+    } else {
+      context.stream_map[(*command.arguments)[0]]
+        = std::fstream((*command.arguments)[0]);
+    }
+
+    std::ostringstream buffer;
+    buffer << context.stream_map[(*command.arguments)[0]].rdbuf();
+
+    // if we don't do this there will be an extraneous nl for the majority of
+    // files processed :(
+    auto buffer_str = buffer.str();
+    const auto nl_str = std::string(nl);
+    if (buffer_str.size() >= nl_str.size()
+        && buffer_str.compare(buffer_str.size() - nl_str.size(), nl_str.size(), nl_str) == 0) {
+      buffer_str.erase(buffer_str.size() - nl_str.size());
+    }
+
+    (*context.operations_stream) += (std::string(nl) + buffer_str);
+  }
+
+  return context;
+}
+
+auto read_in_file_line_function(Context context, const Command& command) -> ResultContext {
+  if (!command.arguments) {
+    return tl::make_unexpected("read_in_file_line_function: no arguments provided");
+  } else if (command.arguments->size() != 1) {
+    return tl::make_unexpected("read_in_file_line_function: read_in_file_line "
+        "expects 1 argument");
+  }
+
+  if (command.address && context.cycle == *command.address || !command.address) {
+    if (!context.stream_map.contains((*command.arguments)[0])) {
+      context.stream_map[(*command.arguments)[0]] = std::fstream((*command.arguments)[0]);
+    }
+    if (!context.stream_map[(*command.arguments)[0]].is_open()) {
+      return tl::make_unexpected("read_in_file_function: file exists in "
+          "stream_map but is not open");
+    }
+
+    std::string line;
+    if (std::getline(context.stream_map[(*command.arguments)[0]], line)) {
+      (*context.operations_stream) += (std::string(nl) + line);
+    }
+  }
+  return context;
+}
+
+auto substitute_function(Context context, const Command& command) -> ResultContext {
+  if (!command.arguments) {
+    return tl::make_unexpected("substitute_function: no arguments provided");
+  } else if (command.arguments->size() != 2) {
+    return tl::make_unexpected("substitute_function: substitute expects 2 argument");
+  }
+
+  if (command.address && context.cycle == *command.address || !command.address) {
+    (*context.operations_stream) = std::regex_replace(*context.operations_stream,
+        std::regex((*command.arguments)[0]), (*command.arguments)[1]);
+  }
+
+  return context;
+}
+
 auto assert_version_function(Context context, const Command& command) -> ResultContext {
   if (!command.arguments) {
     return tl::make_unexpected("assert_version_function: no arguments provided");
   } else if (command.arguments->size() != 1) {
-    return tl::make_unexpected("assert_version_function: translate expects 1 argument");
+    return tl::make_unexpected("assert_version_function: required_version expects 1 argument");
   }
 
   if ((*command.arguments)[0] != sedim_version) {
@@ -230,6 +345,49 @@ auto assert_version_function(Context context, const Command& command) -> ResultC
         + (*command.arguments)[0]
         + std::string(" does not match current version: ")
         + std::string(sedim_version));
+  }
+  return context;
+}
+
+auto append_to_file_function(Context context, const Command& command) -> ResultContext {
+  if (!command.arguments) {
+    return tl::make_unexpected("append_to_file_function: no arguments provided");
+  } else if (command.arguments->size() != 1) {
+    return tl::make_unexpected("append_to_file_function: append_to_file expects 1 argument");
+  }
+
+  if (command.address && context.cycle == *command.address || !command.address) {
+    std::ofstream file_to_append;
+    file_to_append.open((*command.arguments)[0], std::ios::app);
+    if (!file_to_append) {
+      return tl::make_unexpected(std::string("append_to_file_function: unable to "
+            "open file with name: ") + (*command.arguments)[0]);
+    }
+    file_to_append << (*context.operations_stream) << nl;
+  }
+  return context;
+}
+
+auto nl_append_to_file_function(Context context, const Command& command) -> ResultContext {
+  if (!command.arguments) {
+    return tl::make_unexpected("nl_append_to_file_function: no arguments provided");
+  } else if (command.arguments->size() != 1) {
+    return tl::make_unexpected("nl_append_to_file_function: nl_append_to_file expects 1 argument");
+  }
+
+  if (command.address && context.cycle == *command.address || !command.address) {
+    std::ofstream file_to_append;
+    file_to_append.open((*command.arguments)[0], std::ios::app);
+    if (!file_to_append) {
+      return tl::make_unexpected(std::string("nl_append_to_file_function: unable to "
+            "open file with name: ") + (*command.arguments)[0]);
+    }
+    size_t pos = (*context.operations_stream).find((*command.arguments)[0]);
+    if (pos != std::string::npos) {
+      file_to_append << (*context.operations_stream).substr(0, pos + 1);
+    } else {
+      file_to_append << (*context.operations_stream) << nl;
+    }
   }
   return context;
 }
@@ -252,7 +410,7 @@ auto translate_function(Context context, const Command& command) -> ResultContex
   if (!command.arguments) {
     return tl::make_unexpected("translate_function: no arguments provided");
   } else if (command.arguments->size() != 2) {
-    return tl::make_unexpected("translate_function: translate expects 2 argument");
+    return tl::make_unexpected("translate_function: translate expects 2 arguments");
   }
 
   size_t pos = 0;
@@ -304,6 +462,8 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"insert",                  insert_function},
   {"e",                       execute_function},
   {"execute",                 execute_function},
+  {"F",                       prepend_file_name_function},
+  {"prepend_file_name",       prepend_file_name_function},
   {"h",                       add_to_static_function},
   {"add_to_static",           add_to_static_function},
   {"H",                       nl_add_to_static_function},
@@ -314,6 +474,8 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"nl_replace_operation",    nl_replace_operation_function},
   {"l",                       unamb_operations_function},
   {"unamb_operations_stream", unamb_operations_function},
+  {"N",                       next_operation_space_function},
+  {"next_operation_space",    next_operation_space_function},
   {"p",                       print_operations_function},
   {"print",                   print_operations_function},
   {"P",                       nl_print_operations_function},
@@ -321,8 +483,18 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"q",                       quit_function},
   {"Q",                       quit_function},
   {"quit",                    quit_function},
+  {"r",                       read_in_file_function},
+  {"read_in_file",            read_in_file_function},
+  {"R",                       read_in_file_line_function},
+  {"read_in_file_line",       read_in_file_line_function},
+  {"s",                       substitute_function},
+  {"substitute",              substitute_function},
   {"v",                       assert_version_function},
   {"required_version",        assert_version_function},
+  {"w",                       append_to_file_function},
+  {"append_to_file",          append_to_file_function},
+  {"W",                       nl_append_to_file_function},
+  {"nl_append_to_file",       nl_append_to_file_function},
   {"x",                       exchange_function},
   {"exchange",                exchange_function},
   {"y",                       translate_function},
@@ -333,21 +505,39 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"prepend_line_no",         prepend_line_no_function},
 };
 
-auto execute(const std::string& input,
-    const std::string& command_json) -> std::string {
+auto execute_from_files(const std::string& input_file,
+    const std::string& command_file) -> std::string {
+  auto maybe_input = file_to_string(input_file);
+  if (!maybe_input) {
+    throw std::runtime_error(maybe_input.error());
+  }
+  auto input_text = maybe_input.value();
+
+  auto maybe_json = file_to_string(command_file);
+  if (!maybe_json) {
+    throw std::runtime_error(maybe_json.error());
+  }
+  auto command_text = maybe_json.value();
+  return execute(input_text, command_text, input_file);
+}
+
+auto execute(const std::string& input_text, const std::string& command_text,
+    const std::optional<std::string>& file_name,
+    const TextToCommands& text_to_commands) -> std::string {
   std::string result;
 
-  auto context = Context(input);
-  auto maybe_commands = parse_json(command_json);
+  auto context = Context(std::make_pair(file_name, input_text));
+  auto maybe_commands = text_to_commands(command_text);
   if (!maybe_commands) {
     throw std::runtime_error(std::string("execute: unable to parse json: ")
         + maybe_commands.error());
   }
   context.commands = maybe_commands.value();
 
-  size_t pos;
-  while ((pos = context.stream.find(nl)) != std::string_view::npos) {
-    context.operations_stream = context.stream.substr(0, pos);
+  size_t pos = 0;
+  while ((pos = context.file_stream.second.find(nl)) != std::string::npos) {
+    context.operations_stream = context.file_stream.second.substr(0, pos);
+    context.file_stream.second = context.file_stream.second.substr(pos + 1);
     context.cycle++;
     for (const auto& command : context.commands) {
       if (command.name == "d" || command.name == "delete") {
@@ -371,7 +561,6 @@ auto execute(const std::string& input,
     if (context.operations_stream) {
       result += (*context.operations_stream + std::string(nl));
     }
-    context.stream.remove_prefix(pos + 1);
   }
   return result;
 }

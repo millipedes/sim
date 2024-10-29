@@ -1,3 +1,4 @@
+#include <fstream>
 #include <gtest/gtest.h>
 
 #include "Context.h"
@@ -160,7 +161,7 @@ TEST(execution, execute_test_0) {
 #if defined(__linux__)
   // There is a wanrning if the user just wants to execute a whole file, because
   // it would be better to put it through a proper bash interpreter
-  testing::internal::CaptureStdout();
+  testing::internal::CaptureStderr();
   auto result = execute(R"(echo -n "Hello World"
 echo -n "Hello World"
 echo -n "Hello World"
@@ -175,7 +176,7 @@ Hello World
 Hello World
 )";
   // Warning over
-  testing::internal::GetCapturedStdout();
+  testing::internal::GetCapturedStderr();
 
   ASSERT_EQ(result, expected_output);
 #endif
@@ -205,6 +206,44 @@ This is line #6
 
   ASSERT_EQ(result, expected_output);
 #endif
+}
+
+TEST(execution, prepend_file_name_0) {
+  auto result = execute(line_one_through_five, R"({
+  "F": {}
+})", "./test.txt");
+
+  auto expected_output = R"(./test.txt
+This is line #1
+./test.txt
+This is line #2
+./test.txt
+This is line #3
+./test.txt
+This is line #4
+./test.txt
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, prepend_file_name_1) {
+  auto result = execute(line_one_through_five, R"({
+  "F": {
+    "address": 3
+  }
+})", "./test.txt");
+
+  auto expected_output = R"(This is line #1
+This is line #2
+./test.txt
+This is line #3
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
 }
 
 TEST(execution, add_to_static_test_0) {
@@ -415,6 +454,59 @@ This is line #5
   ASSERT_EQ(result, expected_output);
 }
 
+TEST(execution, next_operation_space_0) {
+  auto result = execute(line_one_through_five, R"({
+  "N": { },
+  "s": {
+    "arguments": ["\\n", " "]
+  }
+})");
+
+  auto expected_output = R"(This is line #1 This is line #2
+This is line #3 This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, next_operation_space_1) {
+  auto result = execute(line_one_through_five, R"({
+  "N": { },
+  "s": {
+    "address": 3,
+    "arguments": ["\\n", " "]
+  }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, next_operation_space_2) {
+  auto result = execute(line_one_through_five, R"({
+  "N": {
+    "address": 3
+  },
+  "s": {
+    "arguments": ["\\n", " "]
+  }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #2
+This is line #3 This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
 
 TEST(execution, print_test_0) {
   auto result = execute(line_one_through_five, R"({
@@ -492,6 +584,204 @@ This is line #5
   ASSERT_EQ(result, expected_output);
 }
 
+TEST(execution, read_in_file_test_0) {
+  auto result = execute(line_one_through_five, R"({
+    "r": {
+      "arguments": ["../resources/read_in_file_test.txt"]
+    }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #1
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+This is line #2
+This is line #1
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+This is line #3
+This is line #1
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+This is line #4
+This is line #1
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+This is line #5
+This is line #1
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, read_in_file_test_1) {
+  auto result = execute(line_one_through_five, R"({
+    "r": {
+      "address": 3,
+      "arguments": ["../resources/read_in_file_test.txt"]
+    }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #2
+This is line #3
+This is line #1
+This is line #2
+This is line #3
+This is line #4
+This is line #5
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, read_in_file_line_test_0) {
+  auto result = execute(line_one_through_five, R"({
+    "R": {
+      "arguments": ["../resources/read_in_file_line_eq.txt"]
+    }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #1
+This is line #2
+This is line #2
+This is line #3
+This is line #3
+This is line #4
+This is line #4
+This is line #5
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, read_in_file_line_test_1) {
+  auto result = execute(line_one_through_five, R"({
+    "R": {
+      "arguments": ["../resources/read_in_file_line_gt.txt"]
+    }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #1
+This is line #2
+This is line #2
+This is line #3
+This is line #3
+This is line #4
+This is line #4
+This is line #5
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, read_in_file_line_test_2) {
+  auto result = execute(line_one_through_five, R"({
+    "R": {
+      "arguments": ["../resources/read_in_file_line_lt.txt"]
+    }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #1
+This is line #2
+This is line #2
+This is line #3
+This is line #3
+This is line #4
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, read_in_file_line_test_3) {
+  auto result = execute(line_one_through_five, R"({
+    "R": {
+      "address": 3,
+      "arguments": ["../resources/read_in_file_line_eq.txt"]
+    }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #2
+This is line #3
+This is line #1
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, substitue_test_0) {
+  auto result = execute(R"(The fox is quick
+The dog is quick
+)", R"({
+  "s": {
+    "arguments": ["quick", "swift"]
+  }
+})");
+
+  auto expected_output = R"(The fox is swift
+The dog is swift
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, substitue_test_1) {
+  auto result = execute(R"(The date is 12/01/2023
+The date will be 01/15/2024
+)", R"({
+  "s": {
+    "arguments": ["()" R"(\\d{2})/(\\d{2})/(\\d{4}))" R"(", "$3-$1-$2"]
+  }
+})");
+
+  auto expected_output = R"(The date is 2023-12-01
+The date will be 2024-01-15
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, substitue_test_2) {
+  auto result = execute(R"(The date is 12/01/2023
+The date will be 01/15/2024
+)", R"({
+  "s": {
+    "address": 1,
+    "arguments": ["()" R"(\\d{2})/(\\d{2})/(\\d{4}))" R"(", "$3-$1-$2"]
+  }
+})");
+
+  auto expected_output = R"(The date is 2023-12-01
+The date will be 01/15/2024
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
 TEST(execution, version_test_0) {
   try {
     auto result = execute(line_one_through_five, R"({
@@ -506,6 +796,84 @@ TEST(execution, version_test_0) {
   } catch (...) {
     FAIL() << "Expected std::runtime_error";
   }
+}
+
+TEST(execution, append_to_file_test_0) {
+  // We want to be able to run this over and over without having to remove the
+  // file, this clears it each run
+  std::ofstream clean_out_file("append_to_file_test_0.txt", std::ios::trunc);
+  clean_out_file.close();
+
+  auto result = execute(line_one_through_five, R"({
+  "w": {
+    "arguments": ["append_to_file_test_0.txt"]
+  }
+})");
+
+  auto expected_output = file_to_string("append_to_file_test_0.txt");
+  ASSERT_TRUE(expected_output);
+
+  ASSERT_EQ(result, expected_output.value());
+}
+
+TEST(execution, append_to_file_test_1) {
+  // We want to be able to run this over and over without having to remove the
+  // file, this clears it each run
+  std::ofstream clean_out_file("append_to_file_test_1.txt", std::ios::trunc);
+  clean_out_file.close();
+
+  auto result = execute(line_one_through_five, R"({
+  "w": {
+    "address": 3,
+    "arguments": ["append_to_file_test_1.txt"]
+  }
+})");
+
+  auto expected_output = file_to_string("append_to_file_test_1.txt");
+  ASSERT_TRUE(expected_output);
+  ASSERT_EQ(R"(This is line #3
+)", expected_output.value());
+
+  ASSERT_EQ(result, line_one_through_five);
+}
+
+TEST(execution, nl_append_to_file_test_0) {
+  // We want to be able to run this over and over without having to remove the
+  // file, this clears it each run
+  std::ofstream clean_out_file("nl_append_to_file_test_0.txt", std::ios::trunc);
+  clean_out_file.close();
+
+  auto result = execute(line_one_through_five, R"({
+  "W": {
+    "arguments": ["nl_append_to_file_test_0.txt"]
+  }
+})");
+
+  auto expected_output = file_to_string("nl_append_to_file_test_0.txt");
+  ASSERT_TRUE(expected_output);
+
+  ASSERT_EQ(result, expected_output.value());
+}
+
+TEST(execution, nl_append_to_file_test_1) {
+  // We want to be able to run this over and over without having to remove the
+  // file, this clears it each run
+  std::ofstream clean_out_file("nl_append_to_file_test_1.txt", std::ios::trunc);
+  clean_out_file.close();
+
+  auto result = execute(line_one_through_five, R"({
+  "W": {
+    "address": 3,
+    "arguments": ["nl_append_to_file_test_1.txt"]
+  }
+})");
+
+  auto expected_output = file_to_string("nl_append_to_file_test_1.txt");
+  ASSERT_TRUE(expected_output);
+  ASSERT_EQ(R"(This is line #3
+)", expected_output.value());
+
+  ASSERT_EQ(result, line_one_through_five);
 }
 
 TEST(execution, exchange_test_0) {
