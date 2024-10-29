@@ -38,6 +38,7 @@ struct Context {
   std::optional<std::string> static_stream;
   Commands commands;
   uint64_t cycle;
+  uint64_t current_command;
 
   Context(const std::pair<std::optional<std::string>, std::string>& file_stream)
     : file_stream(file_stream),
@@ -45,7 +46,8 @@ struct Context {
       operations_stream(std::nullopt),
       static_stream(std::nullopt),
       commands(Commands()),
-      cycle(0) {}
+      cycle(0),
+      current_command(0) {}
 
   // destructor
   ~Context() {
@@ -64,7 +66,8 @@ struct Context {
       operations_stream(other.operations_stream),
       static_stream(other.static_stream),
       commands(other.commands),
-      cycle(other.cycle) {
+      cycle(other.cycle),
+      current_command(other.current_command) {
         for (auto& [name, stream] : other.stream_map) {
           stream_map[name] = std::fstream(name);
           if (!stream_map[name]) {
@@ -94,6 +97,7 @@ struct Context {
       static_stream = other.static_stream;
       commands = other.commands;
       cycle = other.cycle;
+      current_command = other.current_command;
     }
     return *this;
   }
@@ -105,7 +109,8 @@ struct Context {
       operations_stream(std::move(other.operations_stream)),
       static_stream(std::move(other.static_stream)),
       commands(std::move(other.commands)),
-      cycle(other.cycle) {}
+      cycle(other.cycle),
+      current_command(other.current_command) {}
 
   // move assignment
   auto operator=(Context&& other) noexcept -> Context& {
@@ -116,6 +121,7 @@ struct Context {
       static_stream = std::move(other.static_stream);
       commands = std::move(other.commands);
       cycle = other.cycle;
+      current_command = other.current_command;
     }
     return *this;
   }

@@ -46,6 +46,24 @@ auto delete_function(Context context, const Command& command) -> ResultContext {
   }
   if (command.address && context.cycle == *command.address || !command.address) {
     context.operations_stream = std::nullopt;
+      context.current_command = context.commands.size();
+  }
+  return context;
+}
+
+auto delete_restart_function(Context context, const Command& command) -> ResultContext {
+  if (command.arguments) {
+    std::cerr << "delete_function: warning: the delete command does not take arguments "
+      "ignoring them" << std::endl;
+  }
+  size_t pos = 0;
+  if (command.address && context.cycle == *command.address || !command.address) {
+    if ((pos = context.operations_stream->find(nl)) != std::string::npos) {
+      context.operations_stream = context.operations_stream->erase(0, pos + 1);
+      context.current_command = 0;
+    } else {
+      context.operations_stream = std::nullopt;
+    }
   }
   return context;
 }
@@ -203,6 +221,10 @@ auto next_operation_space_function(Context context, const Command& command) -> R
       (*context.operations_stream)
         += (std::string(nl) + std::string(context.file_stream.second.substr(0, pos)));
       context.file_stream.second = context.file_stream.second.substr(pos + 1);
+      // tricky, not mentioned in gnu sed manual
+      context.cycle++;
+    } else {
+      context.current_command = context.commands.size();
     }
   }
 
@@ -336,7 +358,8 @@ auto assert_version_function(Context context, const Command& command) -> ResultC
   if (!command.arguments) {
     return tl::make_unexpected("assert_version_function: no arguments provided");
   } else if (command.arguments->size() != 1) {
-    return tl::make_unexpected("assert_version_function: required_version expects 1 argument");
+    return tl::make_unexpected("assert_version_function: required_version expects "
+        "1 argument");
   }
 
   if ((*command.arguments)[0] != sedim_version) {
@@ -353,7 +376,8 @@ auto append_to_file_function(Context context, const Command& command) -> ResultC
   if (!command.arguments) {
     return tl::make_unexpected("append_to_file_function: no arguments provided");
   } else if (command.arguments->size() != 1) {
-    return tl::make_unexpected("append_to_file_function: append_to_file expects 1 argument");
+    return tl::make_unexpected("append_to_file_function: append_to_file expects "
+        "1 argument");
   }
 
   if (command.address && context.cycle == *command.address || !command.address) {
@@ -372,7 +396,8 @@ auto nl_append_to_file_function(Context context, const Command& command) -> Resu
   if (!command.arguments) {
     return tl::make_unexpected("nl_append_to_file_function: no arguments provided");
   } else if (command.arguments->size() != 1) {
-    return tl::make_unexpected("nl_append_to_file_function: nl_append_to_file expects 1 argument");
+    return tl::make_unexpected("nl_append_to_file_function: nl_append_to_file "
+        "expects 1 argument");
   }
 
   if (command.address && context.cycle == *command.address || !command.address) {
@@ -458,6 +483,8 @@ static inline auto control_flow_map = CommandSemanticUMap {
   {"change",                  change_function},
   {"d",                       delete_function},
   {"delete",                  delete_function},
+  {"D",                       delete_restart_function},
+  {"delete_restart",          delete_restart_function},
   {"i",                       insert_function},
   {"insert",                  insert_function},
   {"e",                       execute_function},
@@ -539,14 +566,10 @@ auto execute(const std::string& input_text, const std::string& command_text,
     context.operations_stream = context.file_stream.second.substr(0, pos);
     context.file_stream.second = context.file_stream.second.substr(pos + 1);
     context.cycle++;
-    for (const auto& command : context.commands) {
-      if (command.name == "d" || command.name == "delete") {
-        context = control_flow_map.at(command.name)(std::move(context), command).value();
-        // special case where none of the rest of the commands execute
-        if ((command.address && *command.address == context.cycle) || !command.address) {
-          break;
-        }
-      } else if (control_flow_map.contains(command.name)) {
+    context.current_command = 0;
+    while (context.current_command < context.commands.size()) {
+      const auto& command = context.commands[context.current_command];
+      if (control_flow_map.contains(command.name)) {
         auto maybe_context = control_flow_map.at(command.name)(std::move(context), command);
         if (!maybe_context) {
           throw std::runtime_error(std::string("execute: unable to execute command: ")
@@ -557,6 +580,7 @@ auto execute(const std::string& input_text, const std::string& command_text,
         throw std::runtime_error(std::string("execute: no command with name: ")
             + command.name);
       }
+      context.current_command++;
     }
     if (context.operations_stream) {
       result += (*context.operations_stream + std::string(nl));
