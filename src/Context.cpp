@@ -218,6 +218,30 @@ auto next_operation_space_function(Context context, const Command& command) -> R
   size_t pos = 0;
   if (command.address && context.cycle == *command.address || !command.address) {
     if ((pos = context.file_stream.second.find(nl)) != std::string::npos) {
+      context.result += (*context.operations_stream + std::string(nl));
+      (*context.operations_stream)
+        = std::string(context.file_stream.second.substr(0, pos));
+      context.file_stream.second = context.file_stream.second.substr(pos + 1);
+      // tricky, not mentioned in gnu sed manual
+      context.cycle++;
+    } else {
+      context.current_command = context.commands.size();
+    }
+  }
+
+  return context;
+}
+
+auto append_next_operation_space_function(Context context,
+    const Command& command) -> ResultContext {
+  if (command.arguments) {
+    std::cerr << "append_next_operation_space_function: the "
+      "append_next_operation_space command does not take arguments ignoring them"
+      << std::endl;
+  }
+  size_t pos = 0;
+  if (command.address && context.cycle == *command.address || !command.address) {
+    if ((pos = context.file_stream.second.find(nl)) != std::string::npos) {
       (*context.operations_stream)
         += (std::string(nl) + std::string(context.file_stream.second.substr(0, pos)));
       context.file_stream.second = context.file_stream.second.substr(pos + 1);
@@ -477,59 +501,61 @@ auto prepend_line_no_function(Context context, const Command& command) -> Result
 using SemanticFunc = std::function<ResultContext(Context, const Command&)>;
 using CommandSemanticUMap = std::unordered_map<std::string, SemanticFunc>;
 static inline auto control_flow_map = CommandSemanticUMap {
-  {"a",                       append_function},
-  {"append",                  append_function},
-  {"c",                       change_function},
-  {"change",                  change_function},
-  {"d",                       delete_function},
-  {"delete",                  delete_function},
-  {"D",                       delete_restart_function},
-  {"delete_restart",          delete_restart_function},
-  {"i",                       insert_function},
-  {"insert",                  insert_function},
-  {"e",                       execute_function},
-  {"execute",                 execute_function},
-  {"F",                       prepend_file_name_function},
-  {"prepend_file_name",       prepend_file_name_function},
-  {"h",                       add_to_static_function},
-  {"add_to_static",           add_to_static_function},
-  {"H",                       nl_add_to_static_function},
-  {"nl_add_to_static",        nl_add_to_static_function},
-  {"g",                       replace_operation_function},
-  {"replace_operation",       replace_operation_function},
-  {"G",                       nl_replace_operation_function},
-  {"nl_replace_operation",    nl_replace_operation_function},
-  {"l",                       unamb_operations_function},
-  {"unamb_operations_stream", unamb_operations_function},
-  {"N",                       next_operation_space_function},
-  {"next_operation_space",    next_operation_space_function},
-  {"p",                       print_operations_function},
-  {"print",                   print_operations_function},
-  {"P",                       nl_print_operations_function},
-  {"nl_print",                nl_print_operations_function},
-  {"q",                       quit_function},
-  {"Q",                       quit_function},
-  {"quit",                    quit_function},
-  {"r",                       read_in_file_function},
-  {"read_in_file",            read_in_file_function},
-  {"R",                       read_in_file_line_function},
-  {"read_in_file_line",       read_in_file_line_function},
-  {"s",                       substitute_function},
-  {"substitute",              substitute_function},
-  {"v",                       assert_version_function},
-  {"required_version",        assert_version_function},
-  {"w",                       append_to_file_function},
-  {"append_to_file",          append_to_file_function},
-  {"W",                       nl_append_to_file_function},
-  {"nl_append_to_file",       nl_append_to_file_function},
-  {"x",                       exchange_function},
-  {"exchange",                exchange_function},
-  {"y",                       translate_function},
-  {"translate",               translate_function},
-  {"z",                       zap_function},
-  {"zap",                     zap_function},
-  {"=",                       prepend_line_no_function},
-  {"prepend_line_no",         prepend_line_no_function},
+  {"a",                           append_function},
+  {"append",                      append_function},
+  {"c",                           change_function},
+  {"change",                      change_function},
+  {"d",                           delete_function},
+  {"delete",                      delete_function},
+  {"D",                           delete_restart_function},
+  {"delete_restart",              delete_restart_function},
+  {"i",                           insert_function},
+  {"insert",                      insert_function},
+  {"e",                           execute_function},
+  {"execute",                     execute_function},
+  {"F",                           prepend_file_name_function},
+  {"prepend_file_name",           prepend_file_name_function},
+  {"h",                           add_to_static_function},
+  {"add_to_static",               add_to_static_function},
+  {"H",                           nl_add_to_static_function},
+  {"nl_add_to_static",            nl_add_to_static_function},
+  {"g",                           replace_operation_function},
+  {"replace_operation",           replace_operation_function},
+  {"G",                           nl_replace_operation_function},
+  {"nl_replace_operation",        nl_replace_operation_function},
+  {"l",                           unamb_operations_function},
+  {"unamb_operations_stream",     unamb_operations_function},
+  {"n",                           next_operation_space_function},
+  {"next_operation_space",        next_operation_space_function},
+  {"N",                           append_next_operation_space_function},
+  {"append_next_operation_space", append_next_operation_space_function},
+  {"p",                           print_operations_function},
+  {"print",                       print_operations_function},
+  {"P",                           nl_print_operations_function},
+  {"nl_print",                    nl_print_operations_function},
+  {"q",                           quit_function},
+  {"Q",                           quit_function},
+  {"quit",                        quit_function},
+  {"r",                           read_in_file_function},
+  {"read_in_file",                read_in_file_function},
+  {"R",                           read_in_file_line_function},
+  {"read_in_file_line",           read_in_file_line_function},
+  {"s",                           substitute_function},
+  {"substitute",                  substitute_function},
+  {"v",                           assert_version_function},
+  {"required_version",            assert_version_function},
+  {"w",                           append_to_file_function},
+  {"append_to_file",              append_to_file_function},
+  {"W",                           nl_append_to_file_function},
+  {"nl_append_to_file",           nl_append_to_file_function},
+  {"x",                           exchange_function},
+  {"exchange",                    exchange_function},
+  {"y",                           translate_function},
+  {"translate",                   translate_function},
+  {"z",                           zap_function},
+  {"zap",                         zap_function},
+  {"=",                           prepend_line_no_function},
+  {"prepend_line_no",             prepend_line_no_function},
 };
 
 auto execute_from_files(const std::string& input_file,
@@ -551,7 +577,6 @@ auto execute_from_files(const std::string& input_file,
 auto execute(const std::string& input_text, const std::string& command_text,
     const std::optional<std::string>& file_name,
     const TextToCommands& text_to_commands) -> std::string {
-  std::string result;
 
   auto context = Context(std::make_pair(file_name, input_text));
   auto maybe_commands = text_to_commands(command_text);
@@ -583,8 +608,8 @@ auto execute(const std::string& input_text, const std::string& command_text,
       context.current_command++;
     }
     if (context.operations_stream) {
-      result += (*context.operations_stream + std::string(nl));
+      context.result += (*context.operations_stream + std::string(nl));
     }
   }
-  return result;
+  return context.result;
 }

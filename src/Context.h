@@ -37,6 +37,7 @@ struct Context {
   std::optional<std::string> operations_stream;
   std::optional<std::string> static_stream;
   Commands commands;
+  std::string result;
   uint64_t cycle;
   uint64_t current_command;
 
@@ -46,6 +47,7 @@ struct Context {
       operations_stream(std::nullopt),
       static_stream(std::nullopt),
       commands(Commands()),
+      result(std::string()),
       cycle(0),
       current_command(0) {}
 
@@ -66,6 +68,7 @@ struct Context {
       operations_stream(other.operations_stream),
       static_stream(other.static_stream),
       commands(other.commands),
+      result(other.result),
       cycle(other.cycle),
       current_command(other.current_command) {
         for (auto& [name, stream] : other.stream_map) {
@@ -96,6 +99,7 @@ struct Context {
       operations_stream = other.operations_stream;
       static_stream = other.static_stream;
       commands = other.commands;
+      result = other.result;
       cycle = other.cycle;
       current_command = other.current_command;
     }
@@ -109,6 +113,7 @@ struct Context {
       operations_stream(std::move(other.operations_stream)),
       static_stream(std::move(other.static_stream)),
       commands(std::move(other.commands)),
+      result(std::move(other.result)),
       cycle(other.cycle),
       current_command(other.current_command) {}
 
@@ -120,6 +125,7 @@ struct Context {
       operations_stream = std::move(other.operations_stream);
       static_stream = std::move(other.static_stream);
       commands = std::move(other.commands);
+      result = std::move(other.result);
       cycle = other.cycle;
       current_command = other.current_command;
     }

@@ -481,6 +481,52 @@ This is line #5
 
 TEST(execution, next_operation_space_0) {
   auto result = execute(line_one_through_five, R"({
+  "n": { },
+  "p": { }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #2
+This is line #2
+This is line #3
+This is line #4
+This is line #4
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, next_operation_space_1) {
+  auto result = execute(line_one_through_five, R"({
+  "n": { },
+  "d": { }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #3
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, next_operation_space_2) {
+  auto result = execute(line_one_through_five, R"({
+  "n": {
+    "address": 2
+  },
+  "d": { }
+})");
+
+  auto expected_output = R"(This is line #2
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, append_next_operation_space_0) {
+  auto result = execute(line_one_through_five, R"({
   "N": { },
   "s": {
     "arguments": ["\\n", " "]
@@ -495,7 +541,7 @@ This is line #5
   ASSERT_EQ(result, expected_output);
 }
 
-TEST(execution, next_operation_space_1) {
+TEST(execution, append_next_operation_space_1) {
   auto result = execute(line_one_through_five, R"({
   "N": { },
   "s": {
@@ -514,7 +560,7 @@ This is line #5
   ASSERT_EQ(result, expected_output);
 }
 
-TEST(execution, next_operation_space_2) {
+TEST(execution, append_next_operation_space_2) {
   auto result = execute(line_one_through_five, R"({
   "N": {
     "address": 3
