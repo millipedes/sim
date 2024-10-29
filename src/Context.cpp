@@ -79,7 +79,7 @@ auto delete_function(Context context, const Command& command) -> ResultContext {
   }
   if (command.address && context.cycle == *command.address || !command.address) {
     context.operations_stream = std::nullopt;
-      context.current_command = context.commands.size();
+    context.current_command = context.commands.size();
   }
   return context;
 }

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(sedim)
+project(sim)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,9 +18,9 @@ include_directories(
   ${SRC_DIR}
 )
 
-add_executable(sedim ${SRC_FILES} src/main.cpp)
+add_executable(sim ${SRC_FILES} src/main.cpp)
 
-target_link_libraries(sedim
+target_link_libraries(sim
   tl::expected
   nlohmann_json::nlohmann_json
 )
