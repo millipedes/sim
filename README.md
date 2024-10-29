@@ -15,7 +15,7 @@ As it is currently set up the way in which you interface with `sim` is via a
 json schema with the file which you wish to edit (streams will be supported at
 some point in the future see #1) Let's go through an in depth example:
 
-![Model of Execution](figures/model_of_execution/example_run.png)
+![Model of Execution](./figures/model_of_execution/model_of_execution.png)
 
 The way in which `sim` works is by parsing json objects in *order* in the input
 file and converting them to a type called a `Command`. From here the following
