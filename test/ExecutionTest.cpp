@@ -52,6 +52,69 @@ This is line #5
   ASSERT_EQ(result, expected_output);
 }
 
+TEST(execution, branch_test_0) {
+  auto result = execute(line_one_through_five, R"({
+  "b": {
+    "arguments": ["test"]
+  },
+  "d": { },
+  ":": {
+    "arguments": ["test"]
+  },
+  "p": { }
+})");
+
+  auto expected_output = R"(This is line #1
+This is line #1
+This is line #2
+This is line #2
+This is line #3
+This is line #3
+This is line #4
+This is line #4
+This is line #5
+This is line #5
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, branch_test_1) {
+  auto result = execute(line_one_through_five, R"({
+  "b": {
+    "arguments": ["test"]
+  },
+  "p": { },
+  ":": {
+    "arguments": ["test"]
+  },
+  "d": { }
+})");
+
+  auto expected_output = R"()";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, branch_test_2) {
+  auto result = execute(line_one_through_five, R"({
+  "b": {
+    "address": 2,
+    "arguments": ["test"]
+  },
+  "d": { },
+  ":": {
+    "arguments": ["test"]
+  },
+  "p": { }
+})");
+
+  auto expected_output = R"(This is line #2
+This is line #2
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
 TEST(execution, change_test_0) {
   auto result = execute(line_one_through_five, R"({
   "c": {
@@ -914,6 +977,32 @@ That sim is complete for the world to use!
     "arguments": ["world", "universe"]
   },
   "t": {
+    "address": 2,
+    "arguments": ["test"]
+  },
+  "d": { },
+  ":": {
+    "arguments": ["test"]
+  },
+  "p": { }
+})");
+
+  auto expected_output = R"(This is a message to the universe
+This is a message to the universe
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, branch_true_test_3) {
+  auto result = execute(R"(Hello world
+This is a message to the world
+That sim is complete for the world to use!
+)", R"({
+  "s": {
+    "arguments": ["world", "universe"]
+  },
+  "t": {
     "arguments": ["test"]
   },
   "d": { },
@@ -981,6 +1070,32 @@ That sim is complete for the world to use!
 }
 
 TEST(execution, branch_false_test_2) {
+  auto result = execute(R"(Hello world
+This is a message to the world
+That sim is complete for the world to use!
+)", R"({
+  "s": {
+    "arguments": ["World", "universe"]
+  },
+  "T": {
+    "address": 2,
+    "arguments": ["test"]
+  },
+  "d": { },
+  ":": {
+    "arguments": ["test"]
+  },
+  "p": { }
+})");
+
+  auto expected_output = R"(This is a message to the world
+This is a message to the world
+)";
+
+  ASSERT_EQ(result, expected_output);
+}
+
+TEST(execution, branch_false_test_3) {
   auto result = execute(R"(Hello world
 This is a message to the world
 That sim is complete for the world to use!

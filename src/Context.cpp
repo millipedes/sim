@@ -26,6 +26,39 @@ auto append_function(Context context, const Command& command) -> ResultContext {
   return context;
 }
 
+auto find_label_index(const Context& context,
+    const std::string label) -> std::optional<uint64_t> {
+  for (uint64_t i = 0; i < context.commands.size(); i++) {
+    const auto& command = context.commands[i];
+    if (command.arguments
+        && command.arguments->size() == 1
+        && (command.name == ":" || command.name == "label")
+        && (*command.arguments)[0] == label) {
+      return i;
+    }
+  }
+  return std::nullopt;
+}
+
+auto branch_function(Context context, const Command& command) -> ResultContext {
+  if (!command.arguments) {
+    return tl::make_unexpected("branch_function: no arguments provided");
+  } else if (command.arguments->size() != 1) {
+    return tl::make_unexpected("branch_function: branch expects 1 argument");
+  }
+
+  if (command.address && context.cycle == *command.address || !command.address) {
+    auto maybe_label = find_label_index(context, (*command.arguments)[0]);
+    if (!maybe_label) {
+      context.current_command = context.commands.size();
+    } else {
+      context.current_command = *maybe_label;
+    }
+  }
+
+  return context;
+}
+
 auto change_function(Context context, const Command& command) -> ResultContext {
   if (!command.arguments) {
     return tl::make_unexpected("change_function: no arguments provided");
@@ -384,20 +417,6 @@ auto substitute_function(Context context, const Command& command) -> ResultConte
   return context;
 }
 
-auto find_label_index(const Context& context,
-    const std::string label) -> std::optional<uint64_t> {
-  for (uint64_t i = 0; i < context.commands.size(); i++) {
-    const auto& command = context.commands[i];
-    if (command.arguments
-        && command.arguments->size() == 1
-        && (command.name == ":" || command.name == "label")
-        && (*command.arguments)[0] == label) {
-      return i;
-    }
-  }
-  return std::nullopt;
-}
-
 auto branch_true_function(Context context, const Command& command) -> ResultContext {
   if (!command.arguments) {
     return tl::make_unexpected("branch_true_function: no arguments provided");
@@ -405,11 +424,13 @@ auto branch_true_function(Context context, const Command& command) -> ResultCont
     return tl::make_unexpected("branch_true_function: branch_true expects 1 argument");
   }
 
-  auto maybe_label = find_label_index(context, (*command.arguments)[0]);
-  if (!maybe_label) {
-    context.current_command = context.commands.size();
-  } else if (context.last_replace_success) {
-    context.current_command = *maybe_label;
+  if (command.address && context.cycle == *command.address || !command.address) {
+    auto maybe_label = find_label_index(context, (*command.arguments)[0]);
+    if (!maybe_label) {
+      context.current_command = context.commands.size();
+    } else if (context.last_replace_success) {
+      context.current_command = *maybe_label;
+    }
   }
 
   return context;
@@ -422,11 +443,13 @@ auto branch_false_function(Context context, const Command& command) -> ResultCon
     return tl::make_unexpected("branch_false_function: branch_false expects 1 argument");
   }
 
-  auto maybe_label = find_label_index(context, (*command.arguments)[0]);
-  if (!maybe_label) {
-    context.current_command = context.commands.size();
-  } else if (!context.last_replace_success) {
-    context.current_command = *maybe_label;
+  if (command.address && context.cycle == *command.address || !command.address) {
+    auto maybe_label = find_label_index(context, (*command.arguments)[0]);
+    if (!maybe_label) {
+      context.current_command = context.commands.size();
+    } else if (!context.last_replace_success) {
+      context.current_command = *maybe_label;
+    }
   }
 
   return context;
@@ -569,6 +592,8 @@ using CommandSemanticUMap = std::unordered_map<std::string, SemanticFunc>;
 static inline auto control_flow_map = CommandSemanticUMap {
   {"a",                           append_function},
   {"append",                      append_function},
+  {"b",                           branch_function},
+  {"branch",                      branch_function},
   {"c",                           change_function},
   {"change",                      change_function},
   {"d",                           delete_function},
